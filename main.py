@@ -95,15 +95,46 @@ class Game:
     def generate_moves(self):
         x, y = self.selected_pos
         self.valid_moves.clear()
+        selected_piece = self.selected_piece[1].lower()
 
         if self.selected_piece != EMPTY_SQUARE:
-            if self.selected_piece[1].lower() == "p":
+            if selected_piece == "p":
                 dir = -1 if self.turn == "white" else 1
                 if y == 6 or y == 1:
                     if self.board[y + (dir)][x] == EMPTY_SQUARE:
                         self.valid_moves.append((x, y + (dir)))
                         if self.board[y + (dir * 2)][x] == EMPTY_SQUARE:
                             self.valid_moves.append((x, y + (dir * 2)))
+
+            if selected_piece == "n":
+                knight_moves = (
+                    (x + 2, y + 1),
+                    (x + 2, y - 1),
+                    (x - 2, y + 1),
+                    (x - 2, y - 1),
+                    (x + 1, y + 2),
+                    (x + 1, y - 2),
+                    (x - 1, y + 2),
+                    (x - 1, y - 2),
+                )
+
+                for move in knight_moves:
+                    if (move[0] < 0) or (move[0] > 7) or (move[1] < 0) or (move[1] > 7):
+                        continue
+                    if self.board[move[1]][move[0]] == EMPTY_SQUARE:
+                        self.valid_moves.append(move)
+
+            if selected_piece == "r":
+                print("Rook")
+
+            if selected_piece == "b":
+                print("Bishop")
+
+            if selected_piece == "k":
+                print("King")
+
+            if selected_piece == "q":
+                print("Queen")
 
     def draw_valid_moves(self):
         for move in self.valid_moves:

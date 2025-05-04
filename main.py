@@ -99,12 +99,20 @@ class Game:
             self.generate_moves()
 
     def capture(self, start, end):
-        if self.board[end[1]][end[0]] == EMPTY_SQUARE:
+        if self.board[start[1]][start[0]][0] != self.turn[0]:
+            return
+        if (self.board[end[1]][end[0]] == EMPTY_SQUARE) or (
+            self.board[end[1]][end[0]][0] != self.turn[0]
+        ):
             self.board[end[1]][end[0]] = self.board[start[1]][start[0]]
             self.board[start[1]][start[0]] = EMPTY_SQUARE
             self.selected_piece = EMPTY_SQUARE
             self.selected_pos = (None, None)
             self.generate_moves()
+            self.swap_turns()
+
+    def swap_turns(self):
+        self.turn = "white" if self.turn == "black" else "black"
 
     def generate_moves(self):
         x, y = self.selected_pos
@@ -114,13 +122,15 @@ class Game:
         if self.selected_piece != EMPTY_SQUARE:
             if selected_piece == "p":
                 dir = -1 if self.turn == "white" else 1
+
                 if (self.turn == "white" and y == 6) or (
-                    self.turn == "white" and y == 1
+                    self.turn == "black" and y == 1
                 ):
-                    if self.board[y + (dir)][x] == EMPTY_SQUARE:
-                        self.valid_moves.append((x, y + dir))
-                        if self.board[y + (dir * 2)][x] == EMPTY_SQUARE:
-                            self.valid_moves.append((x, y + (dir * 2)))
+                    if self.board[y + (dir * 2)][x] == EMPTY_SQUARE:
+                        self.valid_moves.append((x, y + (dir * 2)))
+
+                if self.board[y + (dir)][x] == EMPTY_SQUARE:
+                    self.valid_moves.append((x, y + dir))
 
                 if x + 1 <= 7:
                     target_square = self.board[y + dir][x + 1]
@@ -291,6 +301,10 @@ class Game:
         for move in self.valid_moves:
             move_highlight = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
             move_highlight.fill(with_alpha(WHITE, 0))
+
+            if self.selected_piece[0] != self.turn[0]:
+                return
+
             pygame.draw.circle(
                 move_highlight,
                 with_alpha(RED, 100),

@@ -1,5 +1,7 @@
 import pygame
 
+from colors import YELLOW, with_alpha
+
 pygame.init()
 
 # Constants
@@ -84,8 +86,6 @@ class Game:
 
         self.selected_pos = (x, y)
 
-        print(x, y)
-
     def validate_move(self, start, end):
         pass
 
@@ -104,7 +104,6 @@ class Game:
         running = True
         while running:
             for event in pygame.event.get():
-                print(event.type)
                 if event.type == pygame.QUIT:
 
                     running = False
@@ -113,6 +112,15 @@ class Game:
 
             self.draw_board()
             self.draw_pieces()
+
+            if self.selected_pos != (None, None):
+                x, y = self.selected_pos
+                highlight_surface = pygame.Surface(
+                    (SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA
+                )
+                highlight_surface.fill(with_alpha(YELLOW, alpha=50))
+                self.screen.blit(highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE))
+
             pygame.display.flip()
             self.clock.tick(FPS)
 

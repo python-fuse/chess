@@ -1,6 +1,6 @@
 import pygame
 
-from colors import BLACK, WHITE, YELLOW, with_alpha
+from colors import BLACK, RED, WHITE, YELLOW, with_alpha
 
 pygame.init()
 
@@ -28,8 +28,8 @@ class Game:
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
-            [EMPTY_SQUARE] * 8,
-            ["wb"] * 8,
+            ["bp"] * 8,
+            ["wp"] * 8,
             ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
         ]
 
@@ -94,7 +94,7 @@ class Game:
             self.selected_piece = self.board[y][x]
             self.generate_moves()
 
-    def validate_move(self, start, end):
+    def capture(self, start, end):
         pass
 
     def generate_moves(self):
@@ -105,11 +105,29 @@ class Game:
         if self.selected_piece != EMPTY_SQUARE:
             if selected_piece == "p":
                 dir = -1 if self.turn == "white" else 1
-                if y == 6 or y == 1:
+                if (self.turn == "white" and y == 6) or (
+                    self.turn == "white" and y == 1
+                ):
                     if self.board[y + (dir)][x] == EMPTY_SQUARE:
-                        self.valid_moves.append((x, y + (dir)))
+                        self.valid_moves.append((x, y + dir))
                         if self.board[y + (dir * 2)][x] == EMPTY_SQUARE:
                             self.valid_moves.append((x, y + (dir * 2)))
+
+                if x + 1 <= 7:
+                    target_square = self.board[y + dir][x + 1]
+                    if (
+                        target_square != EMPTY_SQUARE
+                        and target_square[0] != self.turn[0]
+                    ):
+                        self.valid_moves.append((x + 1, y + dir))
+
+                if x - 1 >= 0:
+                    target_square = self.board[y + dir][x - 1]
+                    if (
+                        target_square != EMPTY_SQUARE
+                        and target_square[0] != self.turn[0]
+                    ):
+                        self.valid_moves.append((x - 1, y + dir))
 
             if selected_piece == "n":
                 knight_moves = (
@@ -213,11 +231,52 @@ class Game:
                 for move in king_moves:
                     if (move[0] < 0) or (move[0] > 7) or (move[1] < 0) or (move[1] > 7):
                         continue
-                    if self.board[move[1]][move[0]] == EMPTY_SQUARE:
+                    if (
+                        self.board[move[1]][move[0]] == EMPTY_SQUARE
+                        or self.board[move[1]][move[0]][0] != self.turn[0]
+                    ):
                         self.valid_moves.append(move)
 
             if selected_piece == "q":
-                print("Queen")
+                queen_directions = (
+                    (1, 1),
+                    (1, -1),
+                    (-1, 1),
+                    (-1, -1),
+                    (1, 0),
+                    (-1, 0),
+                    (0, 1),
+                    (0, -1),
+                )
+
+                for dx, dy in queen_directions:
+                    current_x = x
+                    current_y = y
+
+                    while True:
+                        current_y += dy
+                        current_x += dx
+
+                        if (
+                            (current_x < 0)
+                            or (current_x > 7)
+                            or (current_y < 0)
+                            or (current_y > 7)
+                        ):
+                            break
+
+                        square = self.board[current_y][current_x]
+
+                        if square == EMPTY_SQUARE:
+                            self.valid_moves.append((current_x, current_y))
+                            continue
+
+                        if square[0] != self.turn[0]:
+                            self.valid_moves.append((current_x, current_y))
+                            break
+
+                        if square[0] == self.turn[0]:
+                            break
 
     def draw_valid_moves(self):
         for move in self.valid_moves:
@@ -225,7 +284,7 @@ class Game:
             move_highlight.fill(with_alpha(WHITE, 0))
             pygame.draw.circle(
                 move_highlight,
-                with_alpha(BLACK, 100),
+                with_alpha(RED, 100),
                 (SQUARE_SIZE // 2, SQUARE_SIZE // 2),
                 10,
             )

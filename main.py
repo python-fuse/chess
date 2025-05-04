@@ -1,6 +1,6 @@
 import pygame
 
-from colors import YELLOW, with_alpha
+from colors import BLACK, WHITE, YELLOW, with_alpha
 
 pygame.init()
 
@@ -85,12 +85,39 @@ class Game:
         )
 
         self.selected_pos = (x, y)
+        print(x, y)
+        self.selected_piece = self.board[y][x]
+        self.generate_moves()
 
     def validate_move(self, start, end):
         pass
 
-    def generate_moves(self, position):
-        pass
+    def generate_moves(self):
+        x, y = self.selected_pos
+        self.valid_moves.clear()
+
+        if self.selected_piece != EMPTY_SQUARE:
+            if self.selected_piece[1].lower() == "p":
+                dir = -1 if self.turn == "white" else 1
+                if y == 6 or y == 1:
+                    if self.board[y + (dir)][x] == EMPTY_SQUARE:
+                        self.valid_moves.append((x, y + (dir)))
+                        if self.board[y + (dir * 2)][x] == EMPTY_SQUARE:
+                            self.valid_moves.append((x, y + (dir * 2)))
+
+    def draw_valid_moves(self):
+        for move in self.valid_moves:
+            move_highlight = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+            move_highlight.fill(with_alpha(WHITE, 0))
+            pygame.draw.circle(
+                move_highlight,
+                with_alpha(BLACK, 100),
+                (SQUARE_SIZE // 2, SQUARE_SIZE // 2),
+                10,
+            )
+            self.screen.blit(
+                move_highlight, (move[0] * SQUARE_SIZE, move[1] * SQUARE_SIZE)
+            )
 
     def is_in_check(self, color):
         pass
@@ -124,6 +151,7 @@ class Game:
                 )
                 highlight_surface.fill(with_alpha(YELLOW, alpha=50))
                 self.screen.blit(highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE))
+            self.draw_valid_moves()
 
             pygame.display.flip()
             self.clock.tick(FPS)

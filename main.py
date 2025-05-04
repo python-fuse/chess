@@ -113,7 +113,11 @@ class Game:
             self.draw_board()
             self.draw_pieces()
 
-            if self.selected_pos != (None, None):
+            if (
+                self.selected_pos != (None, None)
+                and self.board[self.selected_pos[1]][self.selected_pos[0]]
+                != EMPTY_SQUARE
+            ):
                 x, y = self.selected_pos
                 highlight_surface = pygame.Surface(
                     (SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA

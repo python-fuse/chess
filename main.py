@@ -21,6 +21,7 @@ class Game:
         self.selected_piece = None
         self.turn = "white"
         self.valid_moves = []
+        self.target_square = (None, None)
 
         self.board = [
             ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"],
@@ -28,7 +29,7 @@ class Game:
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
-            ["bp"] * 8,
+            [EMPTY_SQUARE] * 8,
             ["wp"] * 8,
             ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
         ]
@@ -88,6 +89,9 @@ class Game:
             self.selected_pos = (None, None)
             self.selected_piece = EMPTY_SQUARE
             self.generate_moves()
+        elif (x, y) in self.valid_moves:
+            self.target_square = (x, y)
+            self.capture(start=self.selected_pos, end=self.target_square)
         else:
             self.selected_pos = (x, y)
             print(x, y)
@@ -95,7 +99,12 @@ class Game:
             self.generate_moves()
 
     def capture(self, start, end):
-        pass
+        if self.board[end[1]][end[0]] == EMPTY_SQUARE:
+            self.board[end[1]][end[0]] = self.board[start[1]][start[0]]
+            self.board[start[1]][start[0]] = EMPTY_SQUARE
+            self.selected_piece = EMPTY_SQUARE
+            self.selected_pos = (None, None)
+            self.generate_moves()
 
     def generate_moves(self):
         x, y = self.selected_pos
@@ -325,6 +334,12 @@ class Game:
                 highlight_surface.fill(with_alpha(YELLOW, alpha=50))
                 self.screen.blit(highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE))
             self.draw_valid_moves()
+
+            # if (
+            #     self.selected_pos != (None, None)
+            #     and self.board[self.selected_pos[1]][self.selected_pos[0]]
+            #     == EMPTY_SQUARE
+            # ):
 
             pygame.display.flip()
             self.clock.tick(FPS)

@@ -29,7 +29,7 @@ class Game:
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
-            ["wr"] * 8,
+            ["wb"] * 8,
             ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
         ]
 
@@ -126,7 +126,10 @@ class Game:
                 for move in knight_moves:
                     if (move[0] < 0) or (move[0] > 7) or (move[1] < 0) or (move[1] > 7):
                         continue
-                    if self.board[move[1]][move[0]] == EMPTY_SQUARE:
+                    if (
+                        self.board[move[1]][move[0]] == EMPTY_SQUARE
+                        or self.board[move[1]][move[0]][0] != self.turn[0]
+                    ):
                         self.valid_moves.append(move)
 
             if selected_piece == "r":
@@ -164,7 +167,36 @@ class Game:
                             break
 
             if selected_piece == "b":
-                print("Bishop")
+                bishop_directions = ((1, 1), (1, -1), (-1, 1), (-1, -1))
+
+                for dx, dy in bishop_directions:
+                    current_x = x
+                    current_y = y
+
+                    while True:
+                        current_y += dy
+                        current_x += dx
+
+                        if (
+                            (current_x < 0)
+                            or (current_x > 7)
+                            or (current_y < 0)
+                            or (current_y > 7)
+                        ):
+                            break
+
+                        square = self.board[current_y][current_x]
+
+                        if square == EMPTY_SQUARE:
+                            self.valid_moves.append((current_x, current_y))
+                            continue
+
+                        if square[0] != self.turn[0]:
+                            self.valid_moves.append((current_x, current_y))
+                            break
+
+                        if square[0] == self.turn[0]:
+                            break
 
             if selected_piece == "k":
                 king_moves = (

@@ -29,7 +29,7 @@ class Game:
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
-            ["wp"] * 8,
+            ["wr"] * 8,
             ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
         ]
 
@@ -130,7 +130,38 @@ class Game:
                         self.valid_moves.append(move)
 
             if selected_piece == "r":
-                rook_moves = ()
+                rook_directions = ((1, 0), (-1, 0), (0, 1), (0, -1))
+
+                for rook_x, rook_y in rook_directions:
+                    current_x = x
+                    current_y = y
+
+                    while True:
+                        current_y += rook_y
+                        current_x += rook_x
+
+                        if (
+                            (current_x < 0)
+                            or (current_x > 7)
+                            or (current_y < 0)
+                            or (current_y > 7)
+                        ):
+                            break
+
+                        square = self.board[current_y][current_x]
+                        print(square)
+
+                        if square == EMPTY_SQUARE:
+                            self.valid_moves.append((current_x, current_y))
+                            continue
+
+                        if square[0] != self.turn[0]:
+                            self.valid_moves.append((current_x, current_y))
+                            print(self.valid_moves)
+                            break
+
+                        if square[0] == self.turn[0]:
+                            break
 
             if selected_piece == "b":
                 print("Bishop")

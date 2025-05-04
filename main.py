@@ -84,7 +84,7 @@ class Game:
             pygame.mouse.get_pos()[1] // SQUARE_SIZE,
         )
 
-        if self.selected_pos != (None, None):
+        if self.selected_pos == (x, y):
             self.selected_pos = (None, None)
             self.selected_piece = EMPTY_SQUARE
             self.generate_moves()
@@ -130,13 +130,28 @@ class Game:
                         self.valid_moves.append(move)
 
             if selected_piece == "r":
-                print("Rook")
+                rook_moves = ()
 
             if selected_piece == "b":
                 print("Bishop")
 
             if selected_piece == "k":
-                print("King")
+                king_moves = (
+                    (x, y + 1),
+                    (x, y - 1),
+                    (x - 1, y),
+                    (x + 1, y),
+                    (x + 1, y + 1),
+                    (x + 1, y - 1),
+                    (x - 1, y + 1),
+                    (x - 1, y - 1),
+                )
+
+                for move in king_moves:
+                    if (move[0] < 0) or (move[0] > 7) or (move[1] < 0) or (move[1] > 7):
+                        continue
+                    if self.board[move[1]][move[0]] == EMPTY_SQUARE:
+                        self.valid_moves.append(move)
 
             if selected_piece == "q":
                 print("Queen")

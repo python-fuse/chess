@@ -84,10 +84,15 @@ class Game:
             pygame.mouse.get_pos()[1] // SQUARE_SIZE,
         )
 
-        self.selected_pos = (x, y)
-        print(x, y)
-        self.selected_piece = self.board[y][x]
-        self.generate_moves()
+        if self.selected_pos != (None, None):
+            self.selected_pos = (None, None)
+            self.selected_piece = EMPTY_SQUARE
+            self.generate_moves()
+        else:
+            self.selected_pos = (x, y)
+            print(x, y)
+            self.selected_piece = self.board[y][x]
+            self.generate_moves()
 
     def validate_move(self, start, end):
         pass

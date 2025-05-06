@@ -1,7 +1,6 @@
 import pygame
-import typing
 
-from colors import BLACK, RED, WHITE, YELLOW, with_alpha
+from colors import RED, WHITE, YELLOW, with_alpha
 
 pygame.init()
 
@@ -292,6 +291,7 @@ class Game:
                             continue
 
                         if square[0] != self.turn[0]:
+                            self.valid_moves.append((current_x, current_y))
                             break
 
                         if square[0] == self.turn[0]:
@@ -315,38 +315,29 @@ class Game:
                 move_highlight, (move[0] * SQUARE_SIZE, move[1] * SQUARE_SIZE)
             )
 
-    # TODO: Make sure only enemy pieces are added to attacks, Do this after eating, cus am so hungry RN
-
     def get_rook_attacks(self, x, y):
         rook_directions = ((1, 0), (-1, 0), (0, 1), (0, -1))
         attacks = []
+        color = self.board[y][x][0]
 
-        for rook_x, rook_y in rook_directions:
-            current_x = x
-            current_y = y
-
-            while True:
-                current_y += rook_y
-                current_x += rook_x
-
-                if (
-                    (current_x < 0)
-                    or (current_x > 7)
-                    or (current_y < 0)
-                    or (current_y > 7)
-                ):
+        for dx, dy in rook_directions:
+            cx, cy = x + dx, y + dy
+            while 0 <= cx < 8 and 0 <= cy < 8:
+                target = self.board[cy][cx]
+                if target == EMPTY_SQUARE:
+                    attacks.append((cx, cy))
+                else:
+                    if target[0] != color:
+                        attacks.append((cx, cy))
                     break
-
-                if self.board[current_y][current_x] != EMPTY_SQUARE:
-                    break
-
-                attacks.append((current_x, current_y))
-
+                cx += dx
+                cy += dy
         return attacks
 
     def get_knight_attacks(self, x, y):
         moves = [(2, 1), (1, 2), (-1, 2), (-2, 1), (-2, -1), (-1, -2), (1, -2), (2, -1)]
         attacks = []
+        color = self.board[y][x][0]
 
         for dx, dy in moves:
             cx, cy = x + dx, y + dy
@@ -358,6 +349,7 @@ class Game:
     def get_bishop_attacks(self, x, y):
         directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
         attacks = []
+        color = self.board[y][x][0]
 
         for dx, dy in directions:
             cx, cy = x, y
@@ -366,8 +358,15 @@ class Game:
                 cy += dy
                 if cx < 0 or cx > 7 or cy < 0 or cy > 7:
                     break
-                attacks.append((cx, cy))
-                if self.board[cy][cx] != EMPTY_SQUARE:
+
+                square = self.board[cy][cx]
+
+                if square == EMPTY_SQUARE:
+                    attacks.append((cx, cy))
+                    continue
+
+                elif square[0] != color:
+                    attacks.append((cx, cy))
                     break
 
         return attacks
@@ -397,7 +396,7 @@ class Game:
 
     def get_pawn_attacks(self, x, y, color):
         attacks = []
-        direction = -1 if color == "white" else 1
+        direction = -1 if color == "w" else 1
         for dx in [-1, 1]:
             cx, cy = x + dx, y + direction
             if 0 <= cx <= 7 and 0 <= cy <= 7:
@@ -407,6 +406,8 @@ class Game:
     def is_in_check(self, color):
         king_position = EMPTY_POSITION
         king_piece = color + "k"
+        opp_color = "b" if color == "w" else "w"
+        opp_attacks = []
 
         for x in range(8):
             for y in range(8):
@@ -414,9 +415,36 @@ class Game:
                     king_position = (x, y)
                     print(f"{king_piece} found at {king_position}")
 
-                if self.board[y][x].startswith(color) and self.board[y][x][1] == "r":
-                    rook_atts = self.get_rook_attacks(x, y)
-                    print(rook_atts)
+                if self.board[y][x][0] == opp_color:
+                    if self.board[y][x][1] == "r":
+                        opp_attacks.append(self.get_rook_attacks(x, y))
+
+                    if self.board[y][x][1] == "q":
+                        opp_attacks.append(self.get_queen_attacks(x, y))
+
+                    if self.board[y][x][1] == "p":
+                        opp_attacks.append(
+                            self.get_pawn_attacks(x, y, color if color == "w" else "b")
+                        )
+
+                    if self.board[y][x][1] == "b":
+                        opp_attacks.append(self.get_bishop_attacks(x, y))
+
+                    if self.board[y][x][1] == "k":
+                        opp_attacks.append(self.get_king_attacks(x, y))
+
+                    if self.board[y][x][1] == "n":
+                        opp_attacks.append(self.get_knight_attacks(x, y))
+
+        opp_attacks = [pos for sublist in opp_attacks for pos in sublist]
+        print(opp_attacks)
+
+        if king_position in opp_attacks:
+            print(f"{king_piece} in check")
+        else:
+            print(f"{king_piece} not in check")
+
+        return king_position in opp_attacks
 
     def is_checkmate(self, color):
         pass
@@ -448,12 +476,6 @@ class Game:
                 highlight_surface.fill(with_alpha(YELLOW, alpha=50))
                 self.screen.blit(highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE))
             self.draw_valid_moves()
-
-            # if (
-            #     self.selected_pos != (None, None)
-            #     and self.board[self.selected_pos[1]][self.selected_pos[0]]
-            #     == EMPTY_SQUARE
-            # ):
 
             pygame.display.flip()
             self.clock.tick(FPS)

@@ -490,9 +490,10 @@ class Game:
                     running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handle_click()
-
             self.draw_board()
-            self.draw_pieces()
+
+            if not self.checked_king == EMPTY_POSITION:
+                self.highlight_check(self.checked_king)
 
             if (
                 self.selected_pos != (None, None)
@@ -506,10 +507,9 @@ class Game:
                 highlight_surface.fill(with_alpha(YELLOW, alpha=50))
                 self.screen.blit(highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE))
 
-            self.draw_valid_moves()
+            self.draw_pieces()
 
-            if not self.checked_king == EMPTY_POSITION:
-                self.highlight_check(self.checked_king)
+            self.draw_valid_moves()
 
             pygame.display.flip()
             self.clock.tick(FPS)

@@ -13,6 +13,9 @@ EMPTY_SQUARE = "--"
 EMPTY_POSITION = (None, None)
 
 
+# TODO: See why king is denied some captures
+
+
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -31,7 +34,7 @@ class Game:
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
-            ["bq"] * 8,
+            [EMPTY_SQUARE] * 8,
             ["wp"] * 8,
             ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
         ]
@@ -405,13 +408,17 @@ class Game:
 
         return attacks
 
-    def get_pawn_attacks(self, x, y, color):
+    def get_pawn_attacks(self, x, y):
         attacks = []
+        color = self.board[y][x][0]
         direction = -1 if color == "w" else 1
+
         for dx in [-1, 1]:
             cx, cy = x + dx, y + direction
-            if 0 <= cx <= 7 and 0 <= cy <= 7:
+
+            if 0 <= cx < 8 and 0 <= cy < 8:
                 attacks.append((cx, cy))
+
         return attacks
 
     def is_in_check(self, color):
@@ -433,9 +440,7 @@ class Game:
                         opp_attacks.append(self.get_queen_attacks(x, y))
 
                     if self.board[y][x][1] == "p":
-                        opp_attacks.append(
-                            self.get_pawn_attacks(x, y, color if color == "w" else "b")
-                        )
+                        opp_attacks.append(self.get_pawn_attacks(x, y))
 
                     if self.board[y][x][1] == "b":
                         opp_attacks.append(self.get_bishop_attacks(x, y))

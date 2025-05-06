@@ -23,6 +23,7 @@ class Game:
         self.turn = "white"
         self.valid_moves = []
         self.target_square = (None, None)
+        self.checked_king = EMPTY_POSITION
 
         self.board = [
             ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"],
@@ -30,7 +31,7 @@ class Game:
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
-            [EMPTY_SQUARE] * 8,
+            ["bq"] * 8,
             ["wp"] * 8,
             ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
         ]
@@ -95,7 +96,6 @@ class Game:
             self.capture(start=self.selected_pos, end=self.target_square)
         else:
             self.selected_pos = (x, y)
-            print(x, y)
             self.selected_piece = self.board[y][x]
             self.generate_moves()
 
@@ -112,6 +112,7 @@ class Game:
         if self.is_in_check(self.turn[0]):
             self.board[start[1]][start[0]] = piece
             self.board[end[1]][end[0]] = captured_piece
+            self.checked_king = EMPTY_POSITION
             return False
 
         opponent_color = "b" if self.turn[0] == "w" else "w"
@@ -423,7 +424,6 @@ class Game:
             for y in range(8):
                 if self.board[y][x] == king_piece:
                     king_position = (x, y)
-                    print(f"{king_piece} found at {king_position}")
 
                 if self.board[y][x][0] == opp_color:
                     if self.board[y][x][1] == "r":
@@ -448,7 +448,28 @@ class Game:
 
         opp_attacks = [pos for sublist in opp_attacks for pos in sublist]
 
-        return king_position in opp_attacks
+        is_checked = king_position in opp_attacks
+
+        if is_checked:
+            self.checked_king = king_position
+        else:
+            self.checked_king = EMPTY_POSITION
+
+        return is_checked
+
+    def highlight_check(self, pos):
+
+        if pos == EMPTY_POSITION:
+            return
+
+        highlight_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+        highlight_surface.fill(
+            with_alpha(RED, 150),
+        )
+
+        self.screen.blit(
+            highlight_surface, (pos[0] * SQUARE_SIZE, pos[1] * SQUARE_SIZE)
+        )
 
     def is_checkmate(self, color):
         pass
@@ -479,7 +500,11 @@ class Game:
                 )
                 highlight_surface.fill(with_alpha(YELLOW, alpha=50))
                 self.screen.blit(highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE))
+
             self.draw_valid_moves()
+
+            if not self.checked_king == EMPTY_POSITION:
+                self.highlight_check(self.checked_king)
 
             pygame.display.flip()
             self.clock.tick(FPS)

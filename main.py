@@ -101,17 +101,27 @@ class Game:
 
     def capture(self, start, end):
         if self.board[start[1]][start[0]][0] != self.turn[0]:
-            return
-        if (self.board[end[1]][end[0]] == EMPTY_SQUARE) or (
-            self.board[end[1]][end[0]][0] != self.turn[0]
-        ):
-            self.board[end[1]][end[0]] = self.board[start[1]][start[0]]
-            self.board[start[1]][start[0]] = EMPTY_SQUARE
-            self.selected_piece = EMPTY_SQUARE
-            self.selected_pos = (None, None)
-            self.generate_moves()
-            self.is_in_check(self.turn[0])
-            self.swap_turns()
+            return False
+
+        piece = self.board[start[1]][start[0]]
+        captured_piece = self.board[end[1]][end[0]]
+
+        self.board[end[1]][end[0]] = piece
+        self.board[start[1]][start[0]] = EMPTY_SQUARE
+
+        if self.is_in_check(self.turn[0]):
+            self.board[start[1]][start[0]] = piece
+            self.board[end[1]][end[0]] = captured_piece
+            return False
+
+        opponent_color = "b" if self.turn[0] == "w" else "w"
+        opponent_in_check = self.is_in_check(opponent_color)
+
+        if opponent_in_check:
+            print(f"{opponent_color} is in check!")
+
+        self.swap_turns()
+        return True
 
     def swap_turns(self):
         self.turn = "white" if self.turn == "black" else "black"
@@ -437,12 +447,6 @@ class Game:
                         opp_attacks.append(self.get_knight_attacks(x, y))
 
         opp_attacks = [pos for sublist in opp_attacks for pos in sublist]
-        print(opp_attacks)
-
-        if king_position in opp_attacks:
-            print(f"{king_piece} in check")
-        else:
-            print(f"{king_piece} not in check")
 
         return king_position in opp_attacks
 

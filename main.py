@@ -1,4 +1,6 @@
 import copy
+import sys
+
 import pygame
 
 from colors import RED, WHITE, YELLOW, with_alpha
@@ -14,7 +16,7 @@ EMPTY_SQUARE = "--"
 EMPTY_POSITION = (None, None)
 
 
-# TODO: Filter out exposing moves
+# TODO: Fix filter to only calculate real moves
 
 
 class Game:
@@ -28,6 +30,8 @@ class Game:
         self.valid_moves = []
         self.target_square = (None, None)
         self.checked_king = EMPTY_POSITION
+        self.game_over = False
+        self.winner = None
 
         self.board = [
             ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"],
@@ -36,7 +40,7 @@ class Game:
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
             [EMPTY_SQUARE] * 8,
-            ["wr"] * 8,
+            ["wp"] * 8,
             ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
         ]
 
@@ -126,10 +130,17 @@ class Game:
             print(f"{opponent_color} is in check!")
 
         self.swap_turns()
+
+        is_mate = self.is_checkmate(self.turn[0])
+
+        if is_mate:
+            self.game_over = True
+            self.winner = "white" if self.turn == "black" else "black"
         return True
 
     def swap_turns(self):
-        self.turn = "white" if self.turn == "black" else "black"
+        color = "white" if self.turn == "black" else "black"
+        self.turn = color
 
     def generate_moves(self):
         x, y = self.selected_pos
@@ -141,7 +152,7 @@ class Game:
                 dir = -1 if self.turn == "white" else 1
 
                 if (self.turn == "white" and y == 6) or (
-                    self.turn == "black" and y == 1
+                        self.turn == "black" and y == 1
                 ):
                     if self.board[y + (dir * 2)][x] == EMPTY_SQUARE:
                         self.valid_moves.append((x, y + (dir * 2)))
@@ -152,16 +163,16 @@ class Game:
                 if x + 1 <= 7:
                     target_square = self.board[y + dir][x + 1]
                     if (
-                        target_square != EMPTY_SQUARE
-                        and target_square[0] != self.turn[0]
+                            target_square != EMPTY_SQUARE
+                            and target_square[0] != self.turn[0]
                     ):
                         self.valid_moves.append((x + 1, y + dir))
 
                 if x - 1 >= 0:
                     target_square = self.board[y + dir][x - 1]
                     if (
-                        target_square != EMPTY_SQUARE
-                        and target_square[0] != self.turn[0]
+                            target_square != EMPTY_SQUARE
+                            and target_square[0] != self.turn[0]
                     ):
                         self.valid_moves.append((x - 1, y + dir))
 
@@ -181,8 +192,8 @@ class Game:
                     if (move[0] < 0) or (move[0] > 7) or (move[1] < 0) or (move[1] > 7):
                         continue
                     if (
-                        self.board[move[1]][move[0]] == EMPTY_SQUARE
-                        or self.board[move[1]][move[0]][0] != self.turn[0]
+                            self.board[move[1]][move[0]] == EMPTY_SQUARE
+                            or self.board[move[1]][move[0]][0] != self.turn[0]
                     ):
                         self.valid_moves.append(move)
 
@@ -198,10 +209,10 @@ class Game:
                         current_x += rook_x
 
                         if (
-                            (current_x < 0)
-                            or (current_x > 7)
-                            or (current_y < 0)
-                            or (current_y > 7)
+                                (current_x < 0)
+                                or (current_x > 7)
+                                or (current_y < 0)
+                                or (current_y > 7)
                         ):
                             break
 
@@ -230,10 +241,10 @@ class Game:
                         current_x += dx
 
                         if (
-                            (current_x < 0)
-                            or (current_x > 7)
-                            or (current_y < 0)
-                            or (current_y > 7)
+                                (current_x < 0)
+                                or (current_x > 7)
+                                or (current_y < 0)
+                                or (current_y > 7)
                         ):
                             break
 
@@ -266,8 +277,8 @@ class Game:
                     if (move[0] < 0) or (move[0] > 7) or (move[1] < 0) or (move[1] > 7):
                         continue
                     if (
-                        self.board[move[1]][move[0]] == EMPTY_SQUARE
-                        or self.board[move[1]][move[0]][0] != self.turn[0]
+                            self.board[move[1]][move[0]] == EMPTY_SQUARE
+                            or self.board[move[1]][move[0]][0] != self.turn[0]
                     ):
                         self.valid_moves.append(move)
 
@@ -292,10 +303,10 @@ class Game:
                         current_x += dx
 
                         if (
-                            (current_x < 0)
-                            or (current_x > 7)
-                            or (current_y < 0)
-                            or (current_y > 7)
+                                (current_x < 0)
+                                or (current_x > 7)
+                                or (current_y < 0)
+                                or (current_y > 7)
                         ):
                             break
 
@@ -501,9 +512,36 @@ class Game:
             self.board = copy.deepcopy(original_board)
 
         self.valid_moves = legal_moves
+        return legal_moves
 
     def is_checkmate(self, color):
-        pass
+        print(f"{color}'s turn!")
+
+        if not self.is_in_check(color):
+            return False
+
+        for x in range(8):
+            for y in range(8):
+                piece = self.board[y][x]
+
+                # If empty square or not curret player's piece, skip it!
+                if piece == EMPTY_SQUARE or piece[0] != color:
+                    continue
+
+                # Set the basis for move genetation and validation
+                self.selected_pos = (x, y)
+                self.selected_piece = self.board[y][x]
+                self.generate_moves()
+
+                # No mate then revert changes
+                if self.valid_moves:
+                    self.selected_pos = EMPTY_POSITION
+                    self.selected_piece = EMPTY_SQUARE
+                    print(self.valid_moves)
+                    return False
+
+        # Mate then end game
+        return True
 
     def run(self):
         self.load_images()
@@ -512,7 +550,6 @@ class Game:
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-
                     running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handle_click()
@@ -522,9 +559,9 @@ class Game:
                 self.highlight_check(self.checked_king)
 
             if (
-                self.selected_pos != (None, None)
-                and self.board[self.selected_pos[1]][self.selected_pos[0]]
-                != EMPTY_SQUARE
+                    self.selected_pos != (None, None)
+                    and self.board[self.selected_pos[1]][self.selected_pos[0]]
+                    != EMPTY_SQUARE
             ):
                 x, y = self.selected_pos
                 highlight_surface = pygame.Surface(
@@ -537,10 +574,14 @@ class Game:
 
             self.draw_valid_moves()
 
+            if self.game_over:
+                self.screen.fill(RED)
+
             pygame.display.flip()
             self.clock.tick(FPS)
 
         pygame.quit()
+        sys.exit()
 
 
 if __name__ == "__main__":

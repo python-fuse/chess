@@ -3,25 +3,26 @@ import sys
 
 import pygame
 
-from colors import RED, WHITE, YELLOW, with_alpha
+from colors import RED, WHITE, YELLOW, with_alpha, GREEN
 
 pygame.init()
 
 # Constants
-SCREEN_WIDTH = 600
-SCREEN_HEIGHT = 600
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 600
+
+SCREEN_WIDTH = WINDOW_WIDTH - 200
+SCREEN_HEIGHT = WINDOW_WIDTH - 200
 FPS = 60
 SQUARE_SIZE = SCREEN_WIDTH // 8
 EMPTY_SQUARE = "--"
 EMPTY_POSITION = (None, None)
 
 
-# TODO: Fix filter to only calculate real moves
-
-
 class Game:
     def __init__(self):
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH,WINDOW_HEIGHT))
+        self.game_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("uChess")
         self.clock = pygame.time.Clock()
         self.selected_pos = (None, None)
@@ -45,10 +46,24 @@ class Game:
         ]
 
     def draw_board(self):
+        # Draw chess board
         board_image = "assets/board.png"
         board = pygame.image.load(board_image)
         board = pygame.transform.scale(board, (SCREEN_WIDTH, SCREEN_HEIGHT))
-        self.screen.blit(board, (0, 0))
+
+        # Draw the game onto the main window
+        self.screen.blit(self.game_screen, (0, 0))
+        self.game_screen.blit(board, (0, 0))
+
+
+    def draw_side_bar(self):
+        side_bar_h = WINDOW_HEIGHT
+        side_bar_w = WINDOW_WIDTH - SCREEN_WIDTH
+
+        side_bar = pygame.Surface((side_bar_w,side_bar_h))
+        side_bar.fill(GREEN)
+
+        self.screen.blit(side_bar,(SCREEN_WIDTH,0))
 
     def load_images(self):
         self.images = {}
@@ -79,7 +94,7 @@ class Game:
             for col in range(8):
                 piece = self.board[row][col]
                 if piece != EMPTY_SQUARE:
-                    self.screen.blit(
+                    self.game_screen.blit(
                         self.images[piece],
                         pygame.Rect(
                             col * SQUARE_SIZE,
@@ -339,7 +354,7 @@ class Game:
                 (SQUARE_SIZE // 2, SQUARE_SIZE // 2),
                 10,
             )
-            self.screen.blit(
+            self.game_screen.blit(
                 move_highlight, (move[0] * SQUARE_SIZE, move[1] * SQUARE_SIZE)
             )
 
@@ -490,7 +505,7 @@ class Game:
             with_alpha(RED, 150),
         )
 
-        self.screen.blit(
+        self.game_screen.blit(
             highlight_surface, (pos[0] * SQUARE_SIZE, pos[1] * SQUARE_SIZE)
         )
 
@@ -539,8 +554,6 @@ class Game:
                     self.selected_piece = EMPTY_SQUARE
                     print(self.valid_moves)
                     return False
-
-        # Mate then end game
         return True
 
     def run(self):
@@ -554,6 +567,7 @@ class Game:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handle_click()
             self.draw_board()
+            self.draw_side_bar()
 
             if not self.checked_king == EMPTY_POSITION:
                 self.highlight_check(self.checked_king)
@@ -568,14 +582,15 @@ class Game:
                     (SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA
                 )
                 highlight_surface.fill(with_alpha(YELLOW, alpha=50))
-                self.screen.blit(highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE))
+                self.game_screen.blit(highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE))
+
 
             self.draw_pieces()
 
             self.draw_valid_moves()
 
             if self.game_over:
-                self.screen.fill(RED)
+                self.game_screen.fill(RED)
 
             pygame.display.flip()
             self.clock.tick(FPS)

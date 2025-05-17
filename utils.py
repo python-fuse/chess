@@ -38,3 +38,15 @@ class Button:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.rect.collidepoint(event.pos):
                 self.on_pressed()
+
+
+def generate_pgn(moves):
+    pgn = []
+    for i in range(0, len(moves), 2):
+        move_number = i // 2 + 1
+        white_move = moves[i].title()
+        black_move = moves[i + 1].title() if i + 1 < len(moves) else ""
+
+        pgn.append(f"{move_number}. {white_move} {black_move}")
+
+    return " ".join(pgn)

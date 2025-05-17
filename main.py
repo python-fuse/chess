@@ -4,7 +4,7 @@ import sys
 import pygame
 
 from colors import LIGHT_BROWN, RED, WHITE, YELLOW, with_alpha, GREEN, BLACK, GRAY
-from utils import Button
+from utils import Button, generate_pgn
 
 pygame.init()
 
@@ -45,6 +45,9 @@ class Game:
         self.images = {}
         self.move_history = []
         self.captured_pieces = []
+        self.chess_squares = {}
+
+        self.generate_chess_moves()
 
         # Game Board
         self.board = [
@@ -70,6 +73,13 @@ class Game:
         # Draw the game onto the main window
         self.screen.blit(self.game_screen, (0, 0))
         self.game_screen.blit(board, (0, 0))
+
+    def generate_chess_moves(self):
+        files = ["a", "b", "c", "d", "e", "f", "g", "h"]
+        ranks = [i for i in range(1, 9)]
+        for row in range(8):
+            for col in range(8):
+                self.chess_squares[(row, col)] = f"{files[col]}{ranks[::-1][row]}"
 
     def draw_side_bar(self):
 
@@ -137,23 +147,55 @@ class Game:
             self.generate_moves()
 
     def capture(self, start, end):
+        # If not player's turn do nothing
         if self.board[start[1]][start[0]][0] != self.turn[0]:
             return False
 
         piece = self.board[start[1]][start[0]]
         captured_piece = self.board[end[1]][end[0]]
 
+        # try capturing the piece or free square
         self.board[end[1]][end[0]] = piece
         self.board[start[1]][start[0]] = EMPTY_SQUARE
 
+        # If it causes check, revert it
         if self.is_in_check(self.turn[0]):
             self.board[start[1]][start[0]] = piece
             self.board[end[1]][end[0]] = captured_piece
             self.checked_king = EMPTY_POSITION
             return False
         else:
+            capturing_piece = piece[1]
+
+            if capturing_piece == "p":
+                if captured_piece != EMPTY_SQUARE:
+                    move = self.chess_squares[(end[1], end[0])]
+                    move = self.chess_squares[(start[1], start[0])][0] + "x" + move
+                    self.move_history.append(move)
+                else:
+                    move = self.chess_squares[(end[1], end[0])]
+                    move = move
+                    self.move_history.append(move)
+
+            if capturing_piece != "p":
+                if captured_piece != EMPTY_SQUARE:
+                    move = self.chess_squares[(end[1], end[0])]
+                    move = (
+                        piece[1]
+                        + "x"
+                        + move
+                        # Todo: Include check and checkmate pgn
+                        + ("#" if self.is_checkmate(captured_piece[0]) else "")
+                    )
+                    self.move_history.append(move)
+                else:
+                    move = self.chess_squares[(end[1], end[0])]
+                    move = piece[1] + move
+                    self.move_history.append(move)
+
             if captured_piece != EMPTY_SQUARE:
                 self.captured_pieces.append(captured_piece)
+        print(self.move_history)
 
         self.swap_turns()
 
@@ -562,7 +604,6 @@ class Game:
                     self.selected_piece = EMPTY_SQUARE
                     print(self.valid_moves)
                     return False
-        print(self.captured_pieces)
         return True
 
     def draw_captured_pieces(self):
@@ -595,6 +636,9 @@ class Game:
         self.replay_button.render()
 
         self.game_screen.blit(winner_screen, (0, 0))
+
+        pgn = generate_pgn(self.move_history)
+        print(pgn)
 
     def reset_board(self):
         self.selected_pos = (None, None)

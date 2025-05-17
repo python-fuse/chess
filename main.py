@@ -3,7 +3,8 @@ import sys
 
 import pygame
 
-from colors import RED, WHITE, YELLOW, with_alpha, GREEN
+from colors import LIGHT_BROWN, RED, WHITE, YELLOW, with_alpha, GREEN, BLACK, GRAY
+from utils import Button
 
 pygame.init()
 
@@ -17,14 +18,22 @@ FPS = 60
 SQUARE_SIZE = SCREEN_WIDTH // 8
 EMPTY_SQUARE = "--"
 EMPTY_POSITION = (None, None)
+side_bar_h = WINDOW_HEIGHT
+side_bar_w = WINDOW_WIDTH - SCREEN_WIDTH
 
 
 class Game:
     def __init__(self):
-        self.screen = pygame.display.set_mode((WINDOW_WIDTH,WINDOW_HEIGHT))
+        # Game Screen Props
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         self.game_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("uChess")
         self.clock = pygame.time.Clock()
+        self.winner_font = pygame.font.SysFont("Comic sans", 32, True)
+        self.font = pygame.font.SysFont("monospace", 20)
+        self.side_bar = pygame.Surface((side_bar_w, side_bar_h))
+
+        # Game State
         self.selected_pos = (None, None)
         self.selected_piece = None
         self.turn = "white"
@@ -33,7 +42,11 @@ class Game:
         self.checked_king = EMPTY_POSITION
         self.game_over = False
         self.winner = None
+        self.images = {}
+        self.move_history = []
+        self.captured_pieces = []
 
+        # Game Board
         self.board = [
             ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"],
             ["bp"] * 8,
@@ -45,6 +58,9 @@ class Game:
             ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
         ]
 
+        # Utils
+        self.replay_button = None
+
     def draw_board(self):
         # Draw chess board
         board_image = "assets/board.png"
@@ -55,18 +71,13 @@ class Game:
         self.screen.blit(self.game_screen, (0, 0))
         self.game_screen.blit(board, (0, 0))
 
-
     def draw_side_bar(self):
-        side_bar_h = WINDOW_HEIGHT
-        side_bar_w = WINDOW_WIDTH - SCREEN_WIDTH
 
-        side_bar = pygame.Surface((side_bar_w,side_bar_h))
-        side_bar.fill(GREEN)
+        self.side_bar.fill(LIGHT_BROWN)
 
-        self.screen.blit(side_bar,(SCREEN_WIDTH,0))
+        self.screen.blit(self.side_bar, (SCREEN_WIDTH, 0))
 
     def load_images(self):
-        self.images = {}
 
         pieces = [
             "wp",
@@ -110,6 +121,9 @@ class Game:
             pygame.mouse.get_pos()[1] // SQUARE_SIZE,
         )
 
+        if (x < 0 or x > 7) or (y < 0 or y > 7):
+            return
+
         if self.selected_pos == (x, y):
             self.selected_pos = (None, None)
             self.selected_piece = EMPTY_SQUARE
@@ -137,12 +151,9 @@ class Game:
             self.board[end[1]][end[0]] = captured_piece
             self.checked_king = EMPTY_POSITION
             return False
-
-        opponent_color = "b" if self.turn[0] == "w" else "w"
-        opponent_in_check = self.is_in_check(opponent_color)
-
-        if opponent_in_check:
-            print(f"{opponent_color} is in check!")
+        else:
+            if captured_piece != EMPTY_SQUARE:
+                self.captured_pieces.append(captured_piece)
 
         self.swap_turns()
 
@@ -164,32 +175,32 @@ class Game:
 
         if self.selected_piece != EMPTY_SQUARE:
             if selected_piece == "p":
-                dir = -1 if self.turn == "white" else 1
+                direction = -1 if self.turn == "white" else 1
 
                 if (self.turn == "white" and y == 6) or (
-                        self.turn == "black" and y == 1
+                    self.turn == "black" and y == 1
                 ):
-                    if self.board[y + (dir * 2)][x] == EMPTY_SQUARE:
-                        self.valid_moves.append((x, y + (dir * 2)))
+                    if self.board[y + (direction * 2)][x] == EMPTY_SQUARE:
+                        self.valid_moves.append((x, y + (direction * 2)))
 
-                if self.board[y + (dir)][x] == EMPTY_SQUARE:
-                    self.valid_moves.append((x, y + dir))
+                if self.board[y + direction][x] == EMPTY_SQUARE:
+                    self.valid_moves.append((x, y + direction))
 
                 if x + 1 <= 7:
-                    target_square = self.board[y + dir][x + 1]
+                    target_square = self.board[y + direction][x + 1]
                     if (
-                            target_square != EMPTY_SQUARE
-                            and target_square[0] != self.turn[0]
+                        target_square != EMPTY_SQUARE
+                        and target_square[0] != self.turn[0]
                     ):
-                        self.valid_moves.append((x + 1, y + dir))
+                        self.valid_moves.append((x + 1, y + direction))
 
                 if x - 1 >= 0:
-                    target_square = self.board[y + dir][x - 1]
+                    target_square = self.board[y + direction][x - 1]
                     if (
-                            target_square != EMPTY_SQUARE
-                            and target_square[0] != self.turn[0]
+                        target_square != EMPTY_SQUARE
+                        and target_square[0] != self.turn[0]
                     ):
-                        self.valid_moves.append((x - 1, y + dir))
+                        self.valid_moves.append((x - 1, y + direction))
 
             if selected_piece == "n":
                 knight_moves = (
@@ -207,8 +218,8 @@ class Game:
                     if (move[0] < 0) or (move[0] > 7) or (move[1] < 0) or (move[1] > 7):
                         continue
                     if (
-                            self.board[move[1]][move[0]] == EMPTY_SQUARE
-                            or self.board[move[1]][move[0]][0] != self.turn[0]
+                        self.board[move[1]][move[0]] == EMPTY_SQUARE
+                        or self.board[move[1]][move[0]][0] != self.turn[0]
                     ):
                         self.valid_moves.append(move)
 
@@ -224,10 +235,10 @@ class Game:
                         current_x += rook_x
 
                         if (
-                                (current_x < 0)
-                                or (current_x > 7)
-                                or (current_y < 0)
-                                or (current_y > 7)
+                            (current_x < 0)
+                            or (current_x > 7)
+                            or (current_y < 0)
+                            or (current_y > 7)
                         ):
                             break
 
@@ -256,10 +267,10 @@ class Game:
                         current_x += dx
 
                         if (
-                                (current_x < 0)
-                                or (current_x > 7)
-                                or (current_y < 0)
-                                or (current_y > 7)
+                            (current_x < 0)
+                            or (current_x > 7)
+                            or (current_y < 0)
+                            or (current_y > 7)
                         ):
                             break
 
@@ -292,8 +303,8 @@ class Game:
                     if (move[0] < 0) or (move[0] > 7) or (move[1] < 0) or (move[1] > 7):
                         continue
                     if (
-                            self.board[move[1]][move[0]] == EMPTY_SQUARE
-                            or self.board[move[1]][move[0]][0] != self.turn[0]
+                        self.board[move[1]][move[0]] == EMPTY_SQUARE
+                        or self.board[move[1]][move[0]][0] != self.turn[0]
                     ):
                         self.valid_moves.append(move)
 
@@ -318,10 +329,10 @@ class Game:
                         current_x += dx
 
                         if (
-                                (current_x < 0)
-                                or (current_x > 7)
-                                or (current_y < 0)
-                                or (current_y > 7)
+                            (current_x < 0)
+                            or (current_x > 7)
+                            or (current_y < 0)
+                            or (current_y > 7)
                         ):
                             break
 
@@ -478,7 +489,6 @@ class Game:
                     if board[y][x][1] == "b":
                         opp_attacks.append(self.get_bishop_attacks(x, y))
 
-                    if board[y][x][1] == "k":
                         opp_attacks.append(self.get_king_attacks(x, y))
 
                     if board[y][x][1] == "n":
@@ -530,8 +540,6 @@ class Game:
         return legal_moves
 
     def is_checkmate(self, color):
-        print(f"{color}'s turn!")
-
         if not self.is_in_check(color):
             return False
 
@@ -539,11 +547,11 @@ class Game:
             for y in range(8):
                 piece = self.board[y][x]
 
-                # If empty square or not curret player's piece, skip it!
+                # If empty square or not current player's piece, skip it!
                 if piece == EMPTY_SQUARE or piece[0] != color:
                     continue
 
-                # Set the basis for move genetation and validation
+                # Set the basis for move generation and validation
                 self.selected_pos = (x, y)
                 self.selected_piece = self.board[y][x]
                 self.generate_moves()
@@ -554,7 +562,63 @@ class Game:
                     self.selected_piece = EMPTY_SQUARE
                     print(self.valid_moves)
                     return False
+        print(self.captured_pieces)
         return True
+
+    def draw_captured_pieces(self):
+        pass
+
+    def show_winner_screen(self):
+        winner_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        winner_screen.fill(with_alpha(BLACK, 70))
+
+        winner_text = self.winner_font.render(f"{self.winner.title()} wins!", 1, WHITE)
+
+        text_rect = winner_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        winner_screen.blit(winner_text, text_rect)
+
+        button_width = 100
+        button_height = 50
+        button_x = (SCREEN_WIDTH // 2) - (button_width // 2)
+        button_y = (SCREEN_HEIGHT // 2) + 30
+
+        self.replay_button = Button(
+            bg_color=GREEN,
+            text_color=WHITE,
+            text="Replay",
+            btn_size=(button_width, button_height),
+            surface=winner_screen,
+            btn_pos=(button_x, button_y),
+            on_pressed=self.reset_board,
+        )
+
+        self.replay_button.render()
+
+        self.game_screen.blit(winner_screen, (0, 0))
+
+    def reset_board(self):
+        self.selected_pos = (None, None)
+        self.selected_piece = None
+        self.turn = "white"
+        self.valid_moves = []
+        self.target_square = (None, None)
+        self.checked_king = EMPTY_POSITION
+        self.game_over = False
+        self.winner = None
+        self.move_history = []
+        self.captured_pieces = []
+
+        self.board = [
+            ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"],
+            ["bp"] * 8,
+            [EMPTY_SQUARE] * 8,
+            [EMPTY_SQUARE] * 8,
+            [EMPTY_SQUARE] * 8,
+            [EMPTY_SQUARE] * 8,
+            ["wp"] * 8,
+            ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
+        ]
+        self.replay_button = None
 
     def run(self):
         self.load_images()
@@ -569,28 +633,34 @@ class Game:
             self.draw_board()
             self.draw_side_bar()
 
+            self.draw_captured_pieces()
+
             if not self.checked_king == EMPTY_POSITION:
                 self.highlight_check(self.checked_king)
 
             if (
-                    self.selected_pos != (None, None)
-                    and self.board[self.selected_pos[1]][self.selected_pos[0]]
-                    != EMPTY_SQUARE
+                self.selected_pos != (None, None)
+                and self.board[self.selected_pos[1]][self.selected_pos[0]]
+                != EMPTY_SQUARE
             ):
                 x, y = self.selected_pos
                 highlight_surface = pygame.Surface(
                     (SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA
                 )
                 highlight_surface.fill(with_alpha(YELLOW, alpha=50))
-                self.game_screen.blit(highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE))
-
+                self.game_screen.blit(
+                    highlight_surface, (x * SQUARE_SIZE, y * SQUARE_SIZE)
+                )
 
             self.draw_pieces()
 
             self.draw_valid_moves()
 
             if self.game_over:
-                self.game_screen.fill(RED)
+                self.show_winner_screen()
+
+            if self.replay_button != None and hasattr(self, "replay_button"):
+                self.replay_button.is_pressed(event)
 
             pygame.display.flip()
             self.clock.tick(FPS)

@@ -9,29 +9,29 @@ from utils import Button, generate_pgn
 pygame.init()
 
 # Constants
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
+# WINDOW_WIDTH = 800
+# WINDOW_HEIGHT = 600
 
-SCREEN_WIDTH = WINDOW_WIDTH - 200
-SCREEN_HEIGHT = WINDOW_WIDTH - 200
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 600
 FPS = 60
 SQUARE_SIZE = SCREEN_WIDTH // 8
 EMPTY_SQUARE = "--"
 EMPTY_POSITION = (None, None)
-side_bar_h = WINDOW_HEIGHT
-side_bar_w = WINDOW_WIDTH - SCREEN_WIDTH
+# side_bar_h = WINDOW_HEIGHT
+# side_bar_w = WINDOW_WIDTH - SCREEN_WIDTH
 
 
 class Game:
     def __init__(self):
         # Game Screen Props
-        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.game_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("uChess")
         self.clock = pygame.time.Clock()
         self.winner_font = pygame.font.SysFont("Comic sans", 32, True)
         self.font = pygame.font.SysFont("monospace", 20)
-        self.side_bar = pygame.Surface((side_bar_w, side_bar_h))
+        # self.side_bar = pygame.Surface((side_bar_w, side_bar_h))
 
         # Game State
         self.selected_pos = (None, None)
@@ -163,41 +163,65 @@ class Game:
             self.board[start[1]][start[0]] = piece
             self.board[end[1]][end[0]] = captured_piece
             self.checked_king = EMPTY_POSITION
-            return False
+            # return False
         else:
             capturing_piece = piece[1]
 
             if capturing_piece == "p":
+                next_turn_color = "w" if self.turn == "black" else "b"
+
                 if captured_piece != EMPTY_SQUARE:
                     move = self.chess_squares[(end[1], end[0])]
-                    move = self.chess_squares[(start[1], start[0])][0] + "x" + move
+                    move = (
+                        self.chess_squares[(start[1], start[0])][0]
+                        + "x"
+                        + move
+                        + ("+" if self.is_in_check(next_turn_color) else "")
+                    )
                     self.move_history.append(move)
                 else:
                     move = self.chess_squares[(end[1], end[0])]
-                    move = move
+                    move = move + ("+" if self.is_in_check(next_turn_color) else "")
                     self.move_history.append(move)
 
             if capturing_piece != "p":
                 if captured_piece != EMPTY_SQUARE:
+                    next_turn_color = "w" if self.turn == "black" else "b"
                     move = self.chess_squares[(end[1], end[0])]
                     move = (
                         piece[1]
                         + "x"
                         + move
-                        # Todo: Include check and checkmate pgn
-                        + ("#" if self.is_checkmate(captured_piece[0]) else "")
+                        + ("+" if self.is_in_check(next_turn_color) else "")
                     )
                     self.move_history.append(move)
                 else:
+                    next_turn_color = "w" if self.turn == "black" else "b"
                     move = self.chess_squares[(end[1], end[0])]
-                    move = piece[1] + move
+                    move = (
+                        piece[1]
+                        + move
+                        + ("+" if self.is_in_check(next_turn_color) else "")
+                    )
                     self.move_history.append(move)
 
             if captured_piece != EMPTY_SQUARE:
                 self.captured_pieces.append(captured_piece)
-        print(self.move_history)
 
         self.swap_turns()
+
+        is_check = self.is_in_check(self.turn[0])
+        is_mate = self.is_checkmate(self.turn[0])
+
+        if is_mate and self.move_history:
+            print("Mate found")
+            self.move_history[-1] = self.move_history[-1].replace("+", "#")
+
+        elif is_check and self.move_history:
+            if not "+" in self.move_history[-1]:
+                self.move_history[-1] = self.move_history[-1] + "+"
+
+        print(self.move_history)
 
         is_mate = self.is_checkmate(self.turn[0])
 
@@ -530,9 +554,6 @@ class Game:
 
                     if board[y][x][1] == "b":
                         opp_attacks.append(self.get_bishop_attacks(x, y))
-
-                        opp_attacks.append(self.get_king_attacks(x, y))
-
                     if board[y][x][1] == "n":
                         opp_attacks.append(self.get_knight_attacks(x, y))
 
@@ -585,25 +606,42 @@ class Game:
         if not self.is_in_check(color):
             return False
 
+        # Save original state
+        original_selected_pos = self.selected_pos
+        original_selected_piece = self.selected_piece
+        original_valid_moves = copy.deepcopy(self.valid_moves)
+
+        # Try each piece of the current player to see if any can make a legal move
         for x in range(8):
             for y in range(8):
                 piece = self.board[y][x]
 
-                # If empty square or not current player's piece, skip it!
+                # Skip empty squares and opponent pieces
                 if piece == EMPTY_SQUARE or piece[0] != color:
                     continue
 
-                # Set the basis for move generation and validation
+                # Generate and test moves for this piece
                 self.selected_pos = (x, y)
-                self.selected_piece = self.board[y][x]
-                self.generate_moves()
+                self.selected_piece = piece
+                self.valid_moves = []
 
-                # No mate then revert changes
+                # Generate all possible moves for this piece
+                self.generate_moves()  # This also filters illegal moves
+
+                # If this piece has any legal moves, it's not checkmate
                 if self.valid_moves:
-                    self.selected_pos = EMPTY_POSITION
-                    self.selected_piece = EMPTY_SQUARE
-                    print(self.valid_moves)
+                    # Restore original state
+                    self.selected_pos = original_selected_pos
+                    self.selected_piece = original_selected_piece
+                    self.valid_moves = original_valid_moves
                     return False
+
+        # Restore original state
+        self.selected_pos = original_selected_pos
+        self.selected_piece = original_selected_piece
+        self.valid_moves = original_valid_moves
+
+        # If we get here, no piece has any legal moves
         return True
 
     def draw_captured_pieces(self):
@@ -675,7 +713,7 @@ class Game:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handle_click()
             self.draw_board()
-            self.draw_side_bar()
+            # self.draw_side_bar()
 
             self.draw_captured_pieces()
 
